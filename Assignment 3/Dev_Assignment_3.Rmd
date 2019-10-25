@@ -1,0 +1,92 @@
+---
+title: "Dev Submission Assignment 3"
+output: html_document
+---
+
+Step 1: Loading important libraries
+
+```{r}
+
+library(ggplot2)
+library(naivebayes)
+library(pROC)
+library(gmodels)
+library(caret)
+library(e1071)
+library(dplyr)
+library(psych)
+```
+
+Step 2: Reading the file & manipulating data as required
+
+```{r}
+Original_Data <- read.csv("C:/Users/BrandRely/Documents/Datasets/FlightDelays.csv")
+
+#Selecting only columns needed
+
+New_Data <- Original_Data[,c(1,2,4,8,10,13)]
+
+New_Data$DAY_WEEK <- as.factor(New_Data$DAY_WEEK)
+New_Data$CRS_DEP_TIME <- as.factor(New_Data$CRS_DEP_TIME)
+summary(New_Data)
+```
+
+Step 3: Partitioning data into 60% Training and 40% Validation (Question - 1)
+
+```{r}
+set.seed(123)
+Train_Index <- createDataPartition(New_Data$Flight.Status, p=0.6, list=FALSE)
+Train_Data <- New_Data[Train_Index,]
+Validation_Data <- New_Data[-Train_Index,]
+```
+
+
+Step 4: Running Naive Bayes Model to predict Flight Delay (Question - 2)
+
+```{r}
+naive_model_1 <- naive_bayes(Flight.Status ~ ., data =Train_Data, usekernel = T)
+naive_model_1
+```
+
+Step 5: Showing Flights that were delayed and on-time at each of the three airports (Question - 3)
+
+```{r}
+#Destination Table
+destination_table <-  Train_Data %>% count(DEST, Flight.Status) %>% mutate(proportion_table = prop.table(n))
+destination_table
+
+#Forming Count Table
+Total_Count <- table(Train_Data$Flight.Status,Train_Data$DEST)
+Total_Count
+
+#Forming Proportion Table
+Proportion_Table <- prop.table(Total_Count)
+Proportion_Table
+```
+
+Step 6: Confusion matrix & ROC for the Validation Data (Question - 4)
+
+```{r}
+#Training Set
+
+Predicted_Test_Label_1 <- predict(naive_model_1,Train_Data)
+confusionMatrix(table(Predicted_Test_Label_1,Train_Data$Flight.Status))
+
+#Validation Set
+
+Predicted_Test_Label_2 <- predict(naive_model_1,Validation_Data)
+confusionMatrix(table(Predicted_Test_Label_2,Validation_Data$Flight.Status))
+
+#Forming Cross-Table
+CrossTable(x=Validation_Data$Flight.Status,y=Predicted_Test_Label_2, prop.chisq = FALSE) 
+
+naive_model_2 <- naiveBayes(Flight.Status ~.,data = Train_Data)
+Predicted_Test_Label_3 <- predict(naive_model_2,Validation_Data, type = "raw")
+
+head(Predicted_Test_Label_3)
+
+#Creating the ROC
+
+roc(Validation_Data$Flight.Status, Predicted_Test_Label_3[,1])
+plot.roc(Validation_Data$Flight.Status, Predicted_Test_Label_3[,1])
+```

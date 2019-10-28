@@ -1,0 +1,53 @@
+---
+title: "Dev Submission Assignment - 1"
+output:
+  html_document:
+    df_print: paged
+---
+#Q1 Dataset with a mix of quantitative and qualitative (categorical) variables. Taken from - (https://www.kaggle.com/borapajo/food-choices#food_coded.csv)
+
+
+Q2: Reading and importing dataset into R
+
+```{r}
+data <-read.csv("C:/Users/BrandRely/Documents/Datasets/food.csv")
+head(data)
+```
+
+Q3: Descriptive statistics for a selection of quantitative and categorical variables
+
+```{r}
+summary(data)
+
+#Quantative variable Descriptive Statistics
+mean(data$GPA) 
+sd(data$GPA)
+median(data$GPA)
+var(data$GPA)
+
+#Categorical variable Descriptive Statistics 
+table(data$Gender)
+table(data$drink)
+```
+
+Q4: Transforming variable "Transform" as sum of two colums - "tortilla_calories" + "calories_chicken" & taking log of newly created variable
+
+```{r}
+data$chic_and_tort <- data$tortilla_calories + data$calories_chicken
+data$logtrnas <- log10(data$chic_and_tort) 
+data$logtrnas
+colnames(data)
+```
+
+Q5: Plot at least one quantitative variable, and one scatterplot
+
+```{r}
+# Histogram
+
+hist(data$GPA, main ="Frequency of GPA", xlab = "GPA", ylab = "Frequency", border="red", col="blue")
+
+#Scatterplot
+
+plot(data$GPA, data$chic_and_tort,  main='Barplot', xlab = "GPA", ylab = "Chic & Tort", col='yellow')
+```
+

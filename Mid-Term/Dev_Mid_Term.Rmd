@@ -1,0 +1,222 @@
+---
+title: "Dev Mid-Term Submission"
+output:
+  html_document:
+    df_print: paged
+---
+Step 1: Calling Necessary Packages
+```{r}
+library(ISLR)
+library(dplyr)
+library(caret)
+library(tidyverse)
+library(factoextra) 
+library(flexclust)
+library(imputeTS)
+```
+
+Step 2: Reading the Data
+```{r}
+data <- read.csv("C:/Users/BrandRely/Documents/Datasets/Universities.csv")
+
+head(data)
+```
+
+(Question - 1)
+Step 3: Deleting records with missing measurements & separating continous variables
+```{r}
+data_omit <- na.omit(data)
+
+data_with_cont_var <- data_omit[-c(1, 2, 3) ] 
+
+head(data_with_cont_var)
+```
+
+(Question - 2)
+Step 4: Normalization the Data
+```{r}
+set.seed(123)
+data_norm <- preProcess(data_with_cont_var, method=c("center", "scale"))
+data_norm <- predict(data_norm,data_with_cont_var)
+head(data_norm)
+```
+
+Step 5: Plotting to measuring distance between all the observations & identifying clusters that
+```{r}
+dist <- get_dist(data_norm)
+fviz_dist(dist)
+```
+
+Step 6: Using K-Means clustering algorithm with K = 5 & K = 3 as it seems reasonable & will give us a good idea
+```{r}
+k4 <- kmeans(data_norm, centers = 5, nstart = 25 )
+k4
+k3 <- kmeans(data_norm, centers = 3, nstart = 25 )
+k3
+```
+
+Step 7: Displaying Center & Size of the Clusters
+```{r}
+#For K = 5
+k4$cluster
+k4$centers
+k4$size
+
+#For K = 3
+k3$cluster
+k3$centers
+k3$size
+
+```
+
+Step 8: Visualization of the Clusters formed
+```{r}
+fviz_cluster(k4,data= data_norm)
+fviz_cluster(k3,data= data_norm)
+
+# K = 3 seems to be reasonable as the clustures seems to be grouped well, however in K = 5 there is more clustering than needed according to the spread of data points.
+```
+
+
+
+Step 9: Testing K for optimal value of K using WSS & Silhouette
+```{r}
+fviz_nbclust(data_norm,kmeans,method = "wss")
+fviz_nbclust(data_norm,kmeans,method = "silhouette")
+
+# The graphs clearly tells us K = 3 is the optimal value as we observed previously by looking at the clusters formed.
+```
+
+Step 10: Creating cluster Index & Merging to Data Frame 
+```{r}
+set.seed(123)
+dist_k3 = kcca(data_norm, k=3, kccaFamily("kmedians"))
+dist_k3
+
+dist_clus <- predict(dist_k3)
+dist_clus
+
+set.seed(123)
+cluster <- data.frame(dist_clus)
+data_omit <- cbind(data_omit, cluster)
+
+colnames(data_omit)
+head(data_omit)
+
+data_omit$expenses <- data_omit$room + data_omit$board + data_omit$add..fees + data_omit$estim..book.costs + data_omit$estim..personal..
+
+
+```
+
+(Question - 3)
+Step 10: Comparing summary statistics for the 3 clusters that are formed
+```{r}
+set.seed(123)
+stats <- data_omit %>% group_by( dist_clus ) %>% 
+summarise( Acceptance_Rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_Out_Of_State_Tuition=mean(out.of.state.tuition), Avg_In_State_Tuition=mean(in.state.tuition), Expenses=mean(expenses), Avg_PHD_Faculty=mean(X..fac..w.PHD), Avg_Student_Faculty_Ratio=mean(stud..fac..ratio), Avg_Graduation_Rate=mean(Graduation.rate), Private_Univs = sum(Public..1...Private..2. == 2), Public_Univs = sum(Public..1...Private..2. == 1))
+stats
+```
+
+######## Describing Clusters for Highest in each category:  ######## 
+```{r}
+stats[which.max(stats$Acceptance_Rate),1:2]
+stats[which.max(stats$Avg_Out_Of_State_Tuition),c(1,3)]
+stats[which.max(stats$Avg_In_State_Tuition),c(1,4)]
+stats[which.max(stats$Expenses ),c(1,5)]
+stats[which.max(stats$Avg_PHD_Faculty),c(1,6)]
+stats[which.max(stats$Avg_Student_Faculty_Ratio),c(1,7)]
+stats[which.max(stats$Avg_Graduation_Rate ),c(1,8)]
+stats[which.max(stats$Private_Univs ),c(1,9)]
+stats[which.max(stats$Public_Univs),c(1,10)]
+
+#From these stats we can tell which cluster is the highest in each category
+
+```
+
+######## Describing Clusters for Lowest in each category:  ######## 
+```{r}
+stats[which.min(stats$Acceptance_Rate),1:2]
+stats[which.min(stats$Avg_Out_Of_State_Tuition),c(1,3)]
+stats[which.min(stats$Avg_In_State_Tuition),c(1,4)]
+stats[which.min(stats$Expenses ),c(1,5)]
+stats[which.min(stats$Avg_PHD_Faculty),c(1,6)]
+stats[which.min(stats$Avg_Student_Faculty_Ratio),c(1,7)]
+stats[which.min(stats$Avg_Graduation_Rate ),c(1,8)]
+stats[which.min(stats$Private_Univs ),c(1,9)]
+stats[which.min(stats$Public_Univs),c(1,10)]
+
+#From these stats we can tell which cluster is the lowest in each category
+```
+
+(Question - 4)
+Step 11: Using Categorical Measurements (State & Private/Public) to characterize clusters
+```{r}
+# State vs No of Univs in each cluster
+table(data_omit$State,data_omit$dist_clus)
+
+
+# No of Univs in each cluster 
+
+data_omit %>% group_by(dist_clus) %>% summarise(Public..1...Private..2. = n())
+
+data_omit
+
+# Summary Statistics of Public
+stats_public <- data_omit %>% filter(Public..1...Private..2. == 1) %>% group_by( dist_clus ) %>%
+summarise( Acceptance_Rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_Out_Of_State_Tuition=mean(out.of.state.tuition), Avg_In_State_Tuition=mean(in.state.tuition), Expenses=mean(expenses), Avg_PHD_Faculty=mean(X..fac..w.PHD), Avg_Student_Faculty_Ratio=mean(stud..fac..ratio), Avg_Graduation_Rate=mean(Graduation.rate))
+stats_public
+
+# No of Public Univs in each cluster
+data_omit %>% group_by(dist_clus) %>% summarise(Sum = sum(Public..1...Private..2. == 1))
+
+# Summary Statistics of Private
+stats_private <- data_omit %>% filter(Public..1...Private..2. == 2) %>%
+    group_by( dist_clus ) %>%
+    summarise( Acceptance_Rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_Out_Of_State_Tuition=mean(out.of.state.tuition), Avg_In_State_Tuition=mean(in.state.tuition), Expenses=mean(expenses), Avg_PHD_Faculty=mean(X..fac..w.PHD), Avg_Student_Faculty_Ratio=mean(stud..fac..ratio), Avg_Graduation_Rate=mean(Graduation.rate))
+stats_private
+
+# No of Private Univs in each cluster
+data_omit %>% group_by(dist_clus) %>% summarise(Sum = sum(Public..1...Private..2. == 2))
+
+# Plotting for State vs Clusters (With Public & Private) 
+ggplot(data_omit,aes(x= dist_clus,y = State, color = Public..1...Private..2. ))+geom_point()
+```
+
+(Question - 5)
+External information that can explain the contents of some or all of these clusters:
+
+1. Ranking of the School
+2. Avg Salary of Parents
+3. Budget of University
+4. Financial Assistance
+5. Avg Salary after Graduation
+
+
+(Question - 6)
+Step 11: Filtering the data for Tufts University
+```{r}
+Tufts <- filter(data, College.Name == "Tufts University")
+```
+
+Step 12: Calculating Euclidean Distances from respective  clusters
+```{r}
+# From Cluster 1
+dist(rbind(Tufts[, -c(1, 2, 3,10)], k3$centers[1,]))
+
+# From Cluster 2
+dist(rbind(Tufts[, -c(1, 2, 3,10)], k3$centers[2,]))
+
+# From Cluster 3
+dist(rbind(Tufts[, -c(1, 2, 3,10)], k3$centers[3,]))
+
+# From the above results it is clear that Tufts Univ is closest to Cluster 1
+```
+
+Step 13: Imputing the missing values for Tufts by taking the average of the cluster measurements taken
+
+```{r}
+tufts_clus <- filter(data_omit, dist_clus == 1)
+tufts_mean <- mean(tufts_clus[,c(10)])
+Tufts[, c(10)] <- tufts_mean
+tufts_mean
+```

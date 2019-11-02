@@ -180,6 +180,8 @@ data_omit %>% group_by(dist_clus) %>% summarise(Sum = sum(Public..1...Private..2
 
 # Plotting for State vs Clusters (With Public & Private) 
 ggplot(data_omit,aes(x= dist_clus,y = State, color = Public..1...Private..2. ))+geom_point()
+
+# There is a relationship between the category variable & clusters which is depicted above. Cluster 1 has the highest no of public universities & Cluster 3 has the highest no of private Universities. 
 ```
 
 (Question - 5)

@@ -49,8 +49,8 @@ fviz_dist(dist)
 
 Step 6: Using K-Means clustering algorithm with K = 5 & K = 3 as it seems reasonable & will give us a good idea
 ```{r}
-k4 <- kmeans(data_norm, centers = 5, nstart = 25 )
-k4
+k5 <- kmeans(data_norm, centers = 5, nstart = 25 )
+k5
 k3 <- kmeans(data_norm, centers = 3, nstart = 25 )
 k3
 ```
@@ -58,9 +58,9 @@ k3
 Step 7: Displaying Center & Size of the Clusters
 ```{r}
 #For K = 5
-k4$cluster
-k4$centers
-k4$size
+k5$cluster
+k5$centers
+k5$size
 
 #For K = 3
 k3$cluster
@@ -71,7 +71,7 @@ k3$size
 
 Step 8: Visualization of the Clusters formed
 ```{r}
-fviz_cluster(k4,data= data_norm)
+fviz_cluster(k5,data= data_norm)
 fviz_cluster(k3,data= data_norm)
 
 # K = 3 seems to be reasonable as the clustures seems to be grouped well, however in K = 5 there is more clustering than needed according to the spread of data points.

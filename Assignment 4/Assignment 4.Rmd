@@ -1,0 +1,221 @@
+---
+title: "Dev Submission for Asssignment 4"
+output:
+  html_document:
+    df_print: paged
+    
+---
+
+<p style="font-family: times, serif; font-size:20pt; font-style:italic">
+
+****Step 1: Calling Necessary Packages
+</p>
+
+```{r loadlib, echo=T, results='hide', message=F, warning=F}
+library(stats)
+library(cluster)
+library(GGally)
+library(dplyr)
+library(tidyverse) 
+library(factoextra) 
+library(dendextend) 
+library(fpc)
+library(NbClust)
+library(compareDF)
+library(caret)
+library(corrplot)
+```
+<p style="font-family: times, serif; font-size:20pt; font-style:italic">
+****Step 2: Reading the file
+</p>
+
+```{r}
+data <- read.csv("C:/Users/BrandRely/Documents/GitHub/ml/Assignment 4/Cereals.csv")
+
+head(data)
+
+# visual representation of the correlation between variables:
+data %>% select(calories, protein, fat, sodium, fiber, carbo, sugars, potass,vitamins,rating) %>% ggcorr( label = TRUE)
+```
+<p style="font-family: times, serif; font-size:20pt; font-style:italic">
+
+****Step 3: Data Preporcessing
+</p>
+```{r}
+# Scaling/standardizing the data
+data <- scale(data[,c(4:16)])
+
+# Total missing values
+sum(is.na(data))
+
+# Removing the missing values
+data <- na.omit(data) 
+
+# Checking for missing values
+sum(is.na(data))
+```
+<p style="font-family: times, serif; font-size:20pt; font-style:italic">
+****Question 1 : Step 4: Applying hierarchical clustering to the data using Euclidean distance
+</p>
+
+```{r}
+# Dissimilarity matrix:
+d <- dist(data, method = "euclidean")
+
+# Hierarchical clustering using Ward Method
+hc1 <- hclust(d, method = "ward.D2")
+
+# Plotting dendogram
+plot(hc1, cex=0.6, hang = -1)
+```
+
+<p style="font-family: times, serif; font-size:20pt; font-style:italic">
+****Step 5: Applying Agnes to Compare Clusters:
+</p>
+```{r}
+# Single Linkage
+single <- agnes(data,method="single", metric = "euclidean")
+single$ac
+pltree(single, cex = 0.6, hang = -1, main = "Single")
+
+# Complete Linkage
+complete <- agnes(data,method="complete", metric = "euclidean")
+complete$ac
+pltree(complete, cex = 0.6, hang = -1, main = "Complete")
+
+# Average Linkage
+average <- agnes(data,method="average", metric = "euclidean")
+average$ac
+pltree(average, cex = 0.6, hang = -1, main = "Average")
+
+# Ward
+ward <- agnes(data,method="ward", metric = "euclidean")
+ward$ac
+pltree(ward, cex = 0.6, hang = -1, main = "Ward")
+
+
+# The best method to use is ward method since agglomerative coefficient is 0.9049881 and since value is closer to 1, it suggests strong clustering structure.
+
+
+```
+
+<p style="font-family: times, serif; font-size:20pt; font-style:italic">
+****Question 2 : Step 6 : No of clusters to choose
+</p>
+```{r }
+# By observing the dendogram we can say that 6 seems to be an optimal choice since the grouping does not seems to be overfitting or underfitting for this number.
+plot(hc1, cex=0.6, hang = -1)
+rect.hclust(hc1, k = 6, border = 1:4)
+
+# Plotting the final clusters we choosed
+data_1 <- data[,c(-1,-2,-3)]
+res.hc <- eclust(data_1, "hclust", k = 6, method = "ward.D2", graph = FALSE) 
+fviz_dend(res.hc, rect = TRUE, show_labels = TRUE) 
+
+# Number of Values in each cluster are as follows:
+hc1 <- cutree(hc1,k=6)
+table(hc1)
+```
+
+<p style="font-family: times, serif; font-size:20pt; font-style:italic">
+****Question 3 :Step 7: Checking the stability & structure of clusters using the function clusterboot & plotting Clusters.
+More info at: https://www.rdocumentation.org/packages/fpc/versions/2.2-3/topics/clusterboot
+</p>
+
+```{r loadlibs, echo=T, results='hide', message=F, warning=F}
+
+# We can use funcntion Clusterboot to calculate the stability of a cluster. 
+
+k <- 6
+
+cboot.hclust <- clusterboot(data,clustermethod=hclustCBI,method="ward.D2", k= k)
+
+
+# Visiualizing clusters formed
+fviz_cluster(list(data = data, cluster = hc1))
+
+plot(silhouette(cutree(ward,6),d))
+
+#### Generally, a valid, stable cluster should yield a mean Jaccard similarity value of 0.75 or more. Between 0.6 and 0.75, clusters may be considered as indicating patterns in the data, but which points exactly should belong to these clusters is highly doubtful. Below average Jaccard values of 0.6, clusters should not be trusted. "Highly stable" clusters should yield average Jaccard similarities of 0.85 and above.
+
+```
+
+
+```{r}
+# Finding Mean Jaccard Similarity Value:
+cboot.hclust$bootmean
+
+#### The above results show that:
+
+# 1. Cluster 1 & Cluster 3 of Cereals are highly stable (cluster stability = 0.9042024 & 0.9105846 respectively)
+# 2. Based on these results, we can say that the Cereals in Cluster 1 & Cluster 3 have highly similar nutritious value within their respective cluster. 
+
+# 3. Cluster 4, Cluster 5 & Cluster 6 are not very stable but can be considered.
+
+# 4. We can also say that the Cereals in  Cluster 4, Cluster 5 & Cluster 6 may be considered as indicating patterns in the data, but which points exactly should belong to these clusters is highly doubtful.
+
+# 5. Cluster 2 on the other hand is highly unstable.
+
+# 6. The Cereals in Cluster 2, on the other hand, show patterns that are different from those of the Cereals in other clusters, but aren't as strongly similar to each other.
+
+```
+
+<p style="font-family: times, serif; font-size:20pt; font-style:italic">
+****Question 4: Step 8: Plotting the Characterstics of the Clusters
+</p>
+
+```{r}
+Cereals <- read.csv("C:/Users/BrandRely/Documents/GitHub/ml/Assignment 4/Cereals.csv")
+
+Cereals_Omit <- na.omit(Cereals)
+
+Cereals_Exc <- Cereals_Omit[,-c(1:3)] 
+
+Cereals_Ward<- agnes(Cereals_Exc,method = "ward")
+
+Cluster <- cutree(Cereals_Ward,k=6)
+
+Data_Frame <-data.frame(cbind(Cereals_Exc,Cluster))  
+
+# Finding Centroid
+
+m1<-data.frame(column=seq(1,13,1),mean=rep(0,13)) 
+m2<-data.frame(column=seq(1,13,1),mean=rep(0,13)) 
+m3<-data.frame(column=seq(1,13,1),mean=rep(0,13))
+m4<-data.frame(column=seq(1,13,1),mean=rep(0,13)) 
+m5<-data.frame(column=seq(1,13,1),mean=rep(0,13))
+m6<-data.frame(column=seq(1,13,1),mean=rep(0,13))
+
+for(i in 1:13)
+{
+  m1[i,2]<-mean(Data_Frame[Data_Frame$Cluster==1,i])
+  m2[i,2]<-mean(Data_Frame[Data_Frame$Cluster==2,i])
+  m3[i,2]<-mean(Data_Frame[Data_Frame$Cluster==3,i])
+  m4[i,2]<-mean(Data_Frame[Data_Frame$Cluster==4,i])
+  m5[i,2]<-mean(Data_Frame[Data_Frame$Cluster==5,i])
+  m6[i,2]<-mean(Data_Frame[Data_Frame$Cluster==6,i])
+  
+}
+
+centroid <- t(cbind(m1$mean,m2$mean,m3$mean,m4$mean, m5$mean, m6$mean))
+
+colnames(centroid) <- colnames(Cereals[,-c(1:3)])
+
+#  Plotting
+ggparcoord(cbind(c(1:6),centroid),columns = 2:14,groupColumn = 1,showPoints = TRUE,title = " Characterstics of Clusters",alphaLines = 0.9) 
+```
+
+<p style="font-family: times, serif; font-size:20pt; font-style:italic">
+****Step 9: Finding the Healthy Cluster
+</p>
+```{r}
+# 1. A healthy Cereal would be the one with low calories, high protein, less fat and so on with high rating. 
+
+# 2. From the above plot we can say that the Elementary Schools can use the Cereals in Cluster 1 in their daily cafeterias. In this way they can provide different Cereals and at the same time make healthy choices.
+
+# 3. Since the rating of the Cereals seems to be on a scale of 0 - 100 it does not appear like we need to normalize it. If we normalize we would loose some magnitude of deciding matrics.
+
+# 4. It would be interesting to see if the CLusters remain the same even after we normalize it.
+
+# 5. We may still use the Function - Clusterboot() which is an easy and efficient way to measure the stability & to do cluster analysis.
+```

@@ -1,0 +1,232 @@
+---
+title: "Final Exam: Segmenting Consumers"
+author: Dev
+date: "December 4, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+dir.create("images")
+```
+
+***
+
+# Problem Statement
+
+CRISA has traditionally segmented markets on the basis of purchaser demographics. They would now like tosegment the market based on two key sets of variables more directly related to the purchase process and to brand loyalty:
+
+1.Purchase behavior (volume, frequency, susceptibility to discounts, and brand loyalty)
+
+2.Basis of purchase (price, selling proposition)
+
+***
+
+# Tasks:
+
+* Using k-means clustering to identify clusters of households based on purchase behaviour & basis of purchase.
+
+* Choosing the right K
+
+* Using a single derived variable for the percentages of total purchases comprised by various brands
+
+* Describing characterstics of the clusters formed
+
+* Developing a model
+
+***
+
+## Installing necessary packages:
+
+```{r}
+library(caret)
+library(viridis)
+library(GGally)
+library(hrbrthemes)
+library(factoextra)
+```
+
+## Reading Data
+
+```{r}
+Brand <- read.csv("C:/Users/BrandRely/Desktop/Finals Week/ML/BathSoap6.csv")
+```
+
+## Normalizing the Data
+```{r}
+norm <- preProcess(Brand[, c(11:19)], method=c("center", "scale"))
+Brand[, c(11:19)] <- predict(norm, Brand[, c(11:19)])
+```
+
+## Making Subsets on the basis of:
+
+
+```{r}
+# Purchase Behaviour
+# Since CRISA is compiling this data for general marketing use, and not on behalf of one particular brand, we can say a customer who is fully devoted to brand A is similar to a customer fully devoted to brand B - both are fully loyal customers in their behavior. But if we include all the brand shares in the clustering, the analysis will treat those two customers as very different. So we will use only the derived variable for maximum purchase share for a brand, which is "Max.Brand" and the "other.brand.ind,". We will not use the individual values - "brand.ind." (The "Max.Brand"" was dervied in Excel sheet by taking only the Brand with Max share out of all individual Brands)
+
+Brand_Pur_Beh <- Brand[, c(12:19,31,47)]
+
+# Basis for Purchase
+# The variables used are: Pur_vol_no_promo, Pur_vol_promo_6, Pur_vol_other, all price categories, selling propositions 5 and 14 (most people seemed to be responding to one or the other of these promotions/propositions).
+
+Brand_Pur_Bas <- Brand[, c(20:22, 32:36, 45 )]
+
+# All of the Above:
+# Combining the above two segements. 
+
+Brand_All <- cbind(Brand_Pur_Beh,Brand_Pur_Bas)
+```
+
+
+# Optimal clusters for Purchase Behavior:
+
+```{r}
+set.seed(123)
+
+fviz_nbclust(Brand_Pur_Beh, kmeans, method = "wss")
+
+# Scaling:
+fviz_nbclust(Brand_Pur_Beh, kmeans, method = "silhouette")
+
+k1 <- kmeans(Brand_Pur_Beh, centers = 4 , nstart = 500)
+
+
+# Size and Center for the Clusters
+
+k1$size
+Brand_Clusters_1 <- data.frame(k1$centers)
+cluster_1 <- matrix(c("1","2","3","4"), nrow = 4)
+
+
+
+# Cluster visualization
+fviz_cluster(k1, data = Brand_Pur_Beh)
+Brand_1_Visual <- cbind(cluster_1, Brand_Clusters_1)
+
+# Parallel Plot
+ggparcoord(Brand_1_Visual,
+    columns = 2:11, groupColumn = 1,
+    showPoints = TRUE, 
+    title = "Purchase Behavior",
+    alphaLines = 0.9, mapping = ggplot2::aes(size = 0.9)
+    ) +ggplot2::scale_size_identity()+theme_minimal()+scale_fill_hue()
+```
+
+# Optimal clusters for Basis for Purchase:
+
+```{r}
+set.seed(123)
+
+fviz_nbclust(Brand_Pur_Bas, kmeans, method = "wss")
+
+# Scaling:
+fviz_nbclust(Brand_Pur_Bas, kmeans, method = "silhouette")
+
+
+k2 <- kmeans(Brand_Pur_Bas, centers = 2 , nstart = 500)
+
+
+# Size and Center for the Clusters
+
+k2$size
+Brand_Clusters_2 <- data.frame(k2$centers)
+cluster_2 <- matrix(c("1","2"),nrow = 2 )
+
+# Cluster visualization
+fviz_cluster(k2, data = Brand_Pur_Bas)
+Brand_2_Visual <- cbind(cluster_2, Brand_Clusters_2)
+
+# Parallel Plot
+ggparcoord(Brand_2_Visual,
+    columns = 2:10, groupColumn = 1, 
+    showPoints = TRUE, 
+    title = "Basis of Purchase",
+    alphaLines = 0.3, mapping = ggplot2::aes(size = 0.9)
+    ) +ggplot2::scale_size_identity()+theme_minimal()+scale_fill_hue()
+  
+```
+
+
+# Optimal clusters for all the above variables:
+
+```{r}
+set.seed(123)
+
+fviz_nbclust(Brand_All, kmeans, method = "wss")
+
+# Scaling:
+
+fviz_nbclust(Brand_All, kmeans, method = "silhouette")
+
+k3 <- kmeans(Brand_All, centers = 4 , nstart = 500)
+
+
+# Size and Center for the Clusters
+
+k3$size
+Brand_Clusters_3 <- data.frame(k3$centers)
+cluster_3 <- matrix(c("1","2","3","4"),nrow = 4 )
+
+# Cluster visualization
+fviz_cluster(k3, data = Brand_All)
+Brand_3_Visual <- cbind(cluster_3, Brand_Clusters_3)
+
+# Parallel Plot
+ggparcoord(Brand_3_Visual,
+    columns = 2:12, groupColumn = 1,
+    showPoints = TRUE, 
+    title = "All",
+    alphaLines = 0.3, mapping = ggplot2::aes(size = 0.9)
+    ) +ggplot2::scale_size_identity()+theme_minimal()+scale_fill_hue()
+
+```
+
+
+## Comment:   
+
+Cluster 1 (n=211)  has low brand loyalty and this group is not particularly responsive to promotions, pricing or selling propositions.
+
+Cluster 2 (n=153) it has high loyalty, low value and price per purchase, and is somewhat responsive to promotions.
+
+Cluster 3 (n=193) has high brand loyality, good purchasing power and is highly susceptible to promotions.
+
+Cluster 4 (n=43) has low brand loyalty, good purchasing power and has  sensitivity to promotions and price.
+
+## Building a model:
+```{r}
+# The model is based on the varibles which shows receptiveness to promotions since this information would most likely be used in targeting direct-mail promotions and that would be defined as a success in the classification model. 
+
+# Subset of the required variables
+model <- Brand[,c(19:22)]
+model_norm <- as.data.frame(scale(model))
+
+# Size and Center for the Clusters
+set.seed(123)
+k4 <- kmeans(model_norm, centers =2 , nstart = 500) 
+k4$size
+Brand_Clusters_Model <- data.frame(k4$centers)
+Cluster_Model <- matrix(c("1","2"),nrow = 2)
+Brand_Model_Visual <- cbind(Cluster_Model,Brand_Clusters_Model)
+
+
+# Cluster Formation
+fviz_cluster(k4, data = model_norm)
+
+# From the cluster formation we can see that there are two distinct clusters formed which indicates opposite traits of customer base which can be found out by making a parallel plot.  
+# Parallel Plot
+ggparcoord(Brand_Model_Visual,
+    columns = 2:5, groupColumn = 1, 
+    showPoints = TRUE, 
+    title = "Parallel Plot for both Purchase Behavior and Basis of PUrchase",
+    alphaLines = 0.3, mapping = ggplot2::aes(size = 0.9)
+    ) +ggplot2::scale_size_identity()+theme_minimal()+scale_fill_hue()
+```
+***
+
+## Final Comment:
+
+*Cluster 1 (n= 497): Average Price is low and this cluster is not responsive to promotions. The money should be saved here.
+*Cluster 2 (n= 103): They have high average price and are highly responsive to promotions, which indicates this as our success segment. Direct mail promotions should be done here heavily!
+
+***

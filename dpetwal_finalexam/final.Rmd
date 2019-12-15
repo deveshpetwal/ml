@@ -218,7 +218,7 @@ fviz_cluster(k4, data = model_norm)
 ggparcoord(Brand_Model_Visual,
     columns = 2:5, groupColumn = 1, 
     showPoints = TRUE, 
-    title = "Parallel Plot for both Purchase Behavior and Basis of PUrchase",
+    title = "Parallel Plot for Responsiveness to Promotions",
     alphaLines = 0.3, mapping = ggplot2::aes(size = 0.9)
     ) +ggplot2::scale_size_identity()+theme_minimal()+scale_fill_hue()
 ```
